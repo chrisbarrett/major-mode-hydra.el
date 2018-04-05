@@ -109,9 +109,9 @@ Intended for testing."
 Each binding in BODY should follow the same format as the
 head-list in `defhydra'.
 
-This is a macro which calls the function `major-mode-hydra--bind-key'
-under the hood.  It's introduced so that it's unecessary to quote
- the mode name and the bindings."
+This is a macro which expands to a function call of
+`major-mode-hydra--bind-key' under the hood.  It's introduced so
+that it's unecessary to quote the mode name and the bindings."
   (declare (indent defun))
   `(major-mode-hydra--bind-key ',mode ,column ',body))
 
