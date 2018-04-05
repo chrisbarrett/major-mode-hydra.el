@@ -98,5 +98,4 @@
        ,@heads)))
 
 (provide 'pretty-hydra)
-
 ;;; pretty-hydra.el ends here

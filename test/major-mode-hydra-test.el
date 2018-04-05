@@ -1,4 +1,4 @@
-;;; major-mode-hydra-tests.el --- Tests for major-mode-hydra  -*- lexical-binding: t; -*-
+;;; major-mode-hydra-test.el --- Tests for major-mode-hydra  -*- lexical-binding: t; -*-
 
 ;; Copyright (C) 2018 Jerry Peng
 
@@ -92,6 +92,5 @@
     (should (equal major-mode-hydra--heads-alist
                    '((emacs-lisp-mode ("Test Emacs" "q" nil "nil")))))))
 
-(provide 'major-mode-hydra-tests)
-
-;;; major-mode-hydra-tests.el ends here
+(provide 'major-mode-hydra-test)
+;;; major-mode-hydra-test.el ends here

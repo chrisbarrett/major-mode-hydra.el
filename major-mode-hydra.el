@@ -36,11 +36,14 @@
   "An alist holding hydra heads for each major mode, keyed by the mode name.")
 
 (defvar major-mode-hydra--body-cache nil
-  "An alist holding compiled hydras for each major mode. Whenever
-  `major-mode-hydra--heads-alist' is changed, the hydra for
-  the mode gets recompiled.")
+  "An alist holding compiled hydras for each major mode.
+Whenever `major-mode-hydra--heads-alist' is changed, the hydra
+for the mode gets recompiled.")
 
 (defun major-mode-hydra--recompile (mode heads)
+  "Recompile a hydra for a major MODE from a list of hydra HEADS.
+The created hydra has :exit set to t, which means after a
+head command gets executed, it exits the hydra."
   (let ((hydra-name (make-symbol (format "major-mode-hydras/%s" mode)))
         ;; By default, exit hydra after invoking a head and warn if a foreign key is pressed.
         (hydra-body '(:exit t :hint nil :foreign-keys warn))
@@ -52,6 +55,7 @@
     (eval `(pretty-hydra-define ,hydra-name ,hydra-body ,hydra-heads-plist))))
 
 (defun major-mode-hydra--get-or-recompile (mode)
+  "Get the existing hydra from the cache, or create a new one for the given major MODE."
   (-if-let (hydra (alist-get mode major-mode-hydra--body-cache))
       hydra
     (-when-let (heads (alist-get mode major-mode-hydra--heads-alist))
@@ -59,7 +63,10 @@
         (setf (alist-get mode major-mode-hydra--body-cache) hydra)
         hydra))))
 
-(defun major-mode-hydra--update-heads (heads column bindings)
+(defun major-mode-hydra--add-heads (heads column bindings)
+  "Update the HEADS list and add to the given COLUMN a list of BINDINGS.
+If the key is already bound to another head in the HEADS list, it
+logs an error without adding that binding."
   (-reduce-from (-lambda (heads (key command . hint-and-plist))
                   (-let [(hint . plist) (if (and (car hint-and-plist)
                                                  (not (keywordp (car hint-and-plist))))
@@ -74,8 +81,15 @@
                 bindings))
 
 (defun major-mode-hydra--bind-key (mode column bindings)
+  "Bind commands to hydra heads for a major MODE under the given COLUMN.
+Each binding in BINDINGS should follow the same format as the
+head-list in `defhydra'.
+
+Existing hydra for the given MODE also gets removed from the
+cache so that next time its gets recompiled with the updated
+heads."
   (-as-> (alist-get mode major-mode-hydra--heads-alist) heads
-         (major-mode-hydra--update-heads heads column bindings)
+         (major-mode-hydra--add-heads heads column bindings)
          (setf (alist-get mode major-mode-hydra--heads-alist)
                heads))
   ;; Invalidate cached hydra for the mode
@@ -83,18 +97,26 @@
         (assq-delete-all mode major-mode-hydra--body-cache)))
 
 (defun major-mode-hydra--unbind-all (mode)
-  "Remove all the hydra heads for the given mode. Introduced for testing."
+  "Remove all the hydra heads for the given MODE.
+Intended for testing."
   (setq major-mode-hydra--body-cache
         (assq-delete-all mode major-mode-hydra--body-cache))
   (setq major-mode-hydra--heads-alist
         (assq-delete-all mode major-mode-hydra--heads-alist)))
 
-;; Use a macro so that it's not necessary to quote things
 (defmacro major-mode-hydra-bind (mode column &rest body)
-  (declare (indent defun) (doc-string 3))
+  "Bind commands to hydra heads for a major MODE under the given COLUMN.
+Each binding in BODY should follow the same format as the
+head-list in `defhydra'.
+
+This is a macro which calls the function `major-mode-hydra--bind-key'
+under the hood.  It's introduced so that it's unecessary to quote
+ the mode name and the bindings."
+  (declare (indent defun))
   `(major-mode-hydra--bind-key ',mode ,column ',body))
 
 (defun major-mode-hydra ()
+  "Summon the major mode hydra for the major mode of current buffer, if there is one."
   (interactive)
   (let* ((mode major-mode)
          (hydra (major-mode-hydra--get-or-recompile mode)))
