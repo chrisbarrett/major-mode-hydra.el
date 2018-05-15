@@ -35,6 +35,18 @@
 (require 's)
 (require 'hydra)
 
+(defgroup pretty-hydra nil
+  "Generate preformatted hydras easily."
+  :group 'bindings
+  :prefix "pretty-hydra-")
+
+(defcustom pretty-hydra-head-formatting-function #'pretty-hydra-default-head-formatting-function
+  "The function to use to convert a hydra head into a string.
+
+It is called with two arguments: the key and optional string hint."
+  :group 'pretty-hydra
+  :type 'function)
+
 (defun pretty-hydra--calc-column-width (column-name heads)
   (->> heads
        (-map (-lambda ((key _ hint))
@@ -45,17 +57,21 @@
        (cons (+ 2 (length column-name)))
        -max))
 
+(defun pretty-hydra-default-head-formatting-function (key &optional hint)
+  (cond
+   ((char-or-string-p hint) ;; string hint
+    (list (format " [_%s_] %s" key hint)))
+   ((or (null hint) (symbolp hint)) ;; no hint, doesn't show it in docstring at all
+    nil)
+   (t  ;; dynamic hint (TODO trim to 10 chars long)
+    (list (format " [_%s_] ?%s?" key key)))))
+
+
 (defun pretty-hydra--gen-heads-docstring (column-name heads max-heads)
   (-let ((column-len (pretty-hydra--calc-column-width column-name heads)))
     (-as-> heads docs
            (-mapcat (-lambda ((key _ hint))
-                      (cond
-                       ((char-or-string-p hint) ;; string hint
-                        (list (format " [_%s_] %s" key hint)))
-                       ((or (null hint) (symbolp hint)) ;; no hint, doesn't show it in docstring at all
-                        nil)
-                       (t  ;; dynamic hint (TODO trim to 10 chars long)
-                        (list (format " [_%s_] ?%s?" key key)))))
+                      (funcall pretty-hydra-head-formatting-function key hint))
                     docs)
            (-concat (list (format " %s^^" column-name)
                           (format "%s" (s-pad-right column-len "─" "")))
