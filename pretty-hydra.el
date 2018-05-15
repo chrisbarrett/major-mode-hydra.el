@@ -108,12 +108,22 @@ It is called with two arguments: the key and optional string hint."
                  head)))))
 
 ;;;###autoload
-(defmacro pretty-hydra-define (name body heads-plist)
+(cl-defmacro pretty-hydra-define (name body heads-plist
+                           &key
+                           (docstring-formatter #'identity)
+                           (docstring-prefix ""))
   (declare (indent defun) (doc-string 3))
-  (let ((docstring (pretty-hydra--gen-body-docstring heads-plist))
-        (heads (pretty-hydra--get-heads heads-plist)))
+  (let* ((docstring (pretty-hydra--gen-body-docstring heads-plist))
+         (updated-docstring (-as-> docstring it
+                                   (concat (eval docstring-prefix) it)
+                                   (funcall docstring-formatter it)
+                                   ;; Docstring must start with a newline.
+                                   (if (s-starts-with? "\n" it)
+                                       it
+                                     (concat "\n" it))))
+         (heads (pretty-hydra--get-heads heads-plist)))
     `(defhydra ,name ,body
-       ,docstring
+       ,updated-docstring
        ,@heads)))
 
 (provide 'pretty-hydra)
