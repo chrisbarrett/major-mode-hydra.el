@@ -121,7 +121,9 @@ It is called with two arguments: the key and optional string hint."
                                    (if (s-starts-with? "\n" it)
                                        it
                                      (concat "\n" it))))
-         (heads (pretty-hydra--get-heads heads-plist)))
+         (heads (-snoc (pretty-hydra--get-heads heads-plist)
+                       '("q" nil :exit t)
+                       '("<escape>" nil :exit t))))
     `(defhydra ,name ,body
        ,updated-docstring
        ,@heads)))
